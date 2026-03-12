@@ -4,12 +4,15 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
 using Microsoft.Win32;
 using ContextMenu = System.Windows.Forms.ContextMenu;
 using MenuItem = System.Windows.Forms.MenuItem;
@@ -21,6 +24,17 @@ namespace DwmLutGUI
     {
         private readonly MainViewModel _viewModel;
         private bool _applyOnCooldown;
+        private static Window _antiDfOverlay;
+
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_TRANSPARENT = 0x20;
+        private const int WS_EX_TOOLWINDOW = 0x80;
 
         private readonly MenuItem _statusItem;
         private readonly MenuItem _applyItem;
@@ -199,6 +213,7 @@ namespace DwmLutGUI
         {
             try
             {
+                HideAntiDirectFlipOverlay();
                 _viewModel.Uninject();
                 RedrawScreens();
             }
@@ -217,6 +232,7 @@ namespace DwmLutGUI
             {
                 _viewModel.ReInject();
                 RedrawScreens();
+                ShowAntiDirectFlipOverlay();
             }
             catch (Exception x)
             {
@@ -228,6 +244,40 @@ namespace DwmLutGUI
                 Thread.Sleep(100);
                 _applyOnCooldown = false;
             });
+        }
+
+        private static void ShowAntiDirectFlipOverlay()
+        {
+            if (_antiDfOverlay != null) return;
+
+            var rect = Screen.AllScreens.Select(x => x.Bounds).Aggregate(Rectangle.Union);
+            _antiDfOverlay = new Window
+            {
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0)),
+                Topmost = true,
+                ShowInTaskbar = false,
+                ShowActivated = false,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                Left = rect.Left,
+                Top = rect.Top,
+                Width = rect.Width,
+                Height = rect.Height,
+            };
+
+            _antiDfOverlay.Show();
+
+            // Make click-through so it doesn't block mouse input
+            var hwnd = new WindowInteropHelper(_antiDfOverlay).Handle;
+            var extStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            SetWindowLong(hwnd, GWL_EXSTYLE, extStyle | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW);
+        }
+
+        private static void HideAntiDirectFlipOverlay()
+        {
+            _antiDfOverlay?.Close();
+            _antiDfOverlay = null;
         }
 
         private static void RedrawScreens()

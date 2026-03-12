@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Windows.Forms;
 
 namespace DwmLutGUI
 {
@@ -36,7 +35,7 @@ namespace DwmLutGUI
             }
             catch (Exception)
             {
-#if !DEBUG
+#if RELEASE
                 MessageBox.Show("Failed to enter debug mode – will not be able to apply LUTs.");
 #endif
                 NoDebug = true;
@@ -116,41 +115,8 @@ namespace DwmLutGUI
             }
         }
 
-        private static void ElevatePrivilege()
-        {
-            var pid = Process.GetProcessesByName("lsass")[0].Id;
-            var processHandle = OpenProcess(DesiredAccess.ProcessQueryLimitedInformation, true, (uint)pid);
-            var openProcessResult = OpenProcessToken(processHandle, DesiredAccess.MaximumAllowed, out var impersonatedTokenHandle);
-            if (!openProcessResult)
-            {
-                throw new Exception("Failed to open process token");
-            }
-            var impersonateResult = ImpersonateLoggedOnUser(impersonatedTokenHandle);
-            if (!impersonateResult)
-            {
-                throw new Exception("Failed to impersonate logged on user");
-            }
-
-            // Get username of the current process
-            StringBuilder userName = new StringBuilder(1024);
-            uint userNameSize = (uint)userName.Capacity;
-            var userNameResult = GetUserName(userName, ref userNameSize);
-            if (!userNameResult)
-            {
-                throw new Exception("Failed to get username");
-            }
-
-            // Check if the username is SYSTEM
-            if (userName.ToString() != "SYSTEM")
-            {
-                throw new Exception("Not running as SYSTEM");
-            }
-        }
-
         public static void Inject(IEnumerable<MonitorData> monitors)
         {
-            ElevatePrivilege();
-            
             File.Copy(AppDomain.CurrentDomain.BaseDirectory + DllName, DllPath, true);
             ClearPermissions(DllPath);
 
@@ -180,8 +146,11 @@ namespace DwmLutGUI
             var failed = false;
             var bytes = Encoding.ASCII.GetBytes(DllPath);
             var dwmInstances = Process.GetProcessesByName("dwm");
+            var currentSessionId = Process.GetCurrentProcess().SessionId;
             foreach (var dwm in dwmInstances)
             {
+                // Check if dwm instance has the same session id as the current process
+                if (dwm.SessionId != currentSessionId) continue;
                 var address = VirtualAllocEx(dwm.Handle, IntPtr.Zero, (UIntPtr)bytes.Length,
                     AllocationType.Reserve | AllocationType.Commit, MemoryProtection.ReadWrite);
                 WriteProcessMemory(dwm.Handle, address, bytes, (UIntPtr)bytes.Length, out _);
@@ -201,27 +170,22 @@ namespace DwmLutGUI
             }
 
             Directory.Delete(LutsPath, true);
-            
 
-            if (!failed)
-            {
-                RevertToSelf();
-                return;
-            }
+            if (!failed) return;
 
             File.Delete(DllPath);
-
-            RevertToSelf();
-
             throw new Exception(
                 "Failed to load or initialize DLL. This probably means that a LUT file is malformed or that DWM got updated.");
         }
 
         public static void Uninject()
         {
+            var currentSessionId = Process.GetCurrentProcess().SessionId;
             var dwmInstances = Process.GetProcessesByName("dwm");
             foreach (var dwm in dwmInstances)
             {
+                // Check if dwm instance has the same session id as the current process
+                if (dwm.SessionId != currentSessionId) continue;
                 var modules = dwm.Modules;
                 foreach (ProcessModule module in modules)
                 {
@@ -229,7 +193,7 @@ namespace DwmLutGUI
                     {
                         var thread = CreateRemoteThread(dwm.Handle, IntPtr.Zero, 0, FreeLibrary, module.BaseAddress,
                             0, out _);
-                        WaitForSingleObject(thread, uint.MaxValue);
+                        WaitForSingleObject(thread, 3000);
                         CloseHandle(thread);
                     }
 
@@ -239,7 +203,7 @@ namespace DwmLutGUI
                 dwm.Dispose();
             }
 
-            File.Delete(DllPath);
+            //File.Delete(DllPath);
         }
 
         private static void ClearPermissions(string path)
@@ -285,23 +249,6 @@ namespace DwmLutGUI
         private static extern IntPtr CloseHandle(IntPtr hObject);
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr OpenProcess(DesiredAccess dwDesiredAccess, bool bInheritHandle,
-                       uint dwProcessId);
-
-        [DllImport("advapi32.dll", SetLastError = true)]
-        private static extern bool OpenProcessToken(IntPtr processHandle, DesiredAccess desiredAccess, out IntPtr tokenHandle);
-
-        [DllImport("advapi32.dll", SetLastError = true)]
-        private static extern bool ImpersonateLoggedOnUser(IntPtr hToken);
-
-        [DllImport("advapi32.dll", SetLastError = true)]
-        private static extern bool GetUserName(StringBuilder lpBuffer, ref uint nSize);
-
-
-        [DllImport("advapi32.dll", SetLastError = true)]
-        private static extern bool RevertToSelf();
-
-        [DllImport("kernel32.dll")]
         private static extern IntPtr CreateFile(string lpFileName, DesiredAccess dwDesiredAccess, uint dwShareMode,
             IntPtr lpSecurityAttributes, CreationDisposition dwCreationDisposition,
             FlagsAndAttributes dwFlagsAndAttributes, IntPtr hTemplateFile);
@@ -334,9 +281,7 @@ namespace DwmLutGUI
         private enum DesiredAccess
         {
             ReadControl = 0x20000,
-            WriteDac = 0x40000,
-            ProcessQueryLimitedInformation = 0x1000,
-            MaximumAllowed = 0x02000000
+            WriteDac = 0x40000
         }
 
         private enum CreationDisposition

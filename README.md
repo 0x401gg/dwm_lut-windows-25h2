@@ -28,6 +28,18 @@ private functions no longer prevents LUT injection from initializing.
 # About
 This tool applies 3D LUTs to the Windows desktop by hooking into DWM. It works in both SDR and HDR modes, and uses tetrahedral interpolation on the LUT data. In SDR, blue-noise dithering is applied to the output to reduce banding.
 
+## How it works
+
+The GUI injects `dwm_lut.dll` into `dwm.exe`, the Windows Desktop Window
+Manager. DWM composites application windows into the final desktop image. The
+injected DLL hooks DWM's Direct3D rendering path and applies the configured 3D
+LUT before the composed frame reaches the display.
+
+The DLL does **not** inject into game processes. However, anti-cheat software may
+still detect or reject modification of the Windows graphics pipeline, and some
+games prohibit color filters that can improve visibility. Disable and close
+dwm_lut before launching competitive or anti-cheat-protected games.
+
 Compatibility targets:
 
 - Windows 11 25H2, build 26200.x (including the June 2026 KB5094126 family)

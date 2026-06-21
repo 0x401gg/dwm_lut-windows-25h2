@@ -1,5 +1,11 @@
 # dwm_lut for current Windows 11 builds
 
+> [!WARNING]
+> **Untested:** this exact v4.1.0 fork has not yet been built or runtime-tested
+> on Windows. Use it experimentally and keep a recovery path available.
+
+> Vibe-coded with Codex 5.5.
+
 See [CHANGELOG.md](CHANGELOG.md) for the v4.1.0 compatibility and safety changes.
 
 Maintenance update of [ledoge/dwm_lut](https://github.com/ledoge/dwm_lut), based on

@@ -263,8 +263,24 @@ bool isWindows11 = false;
 bool isWindows11_24h2 = false;
 bool isWindows11_25h2 = false;
 
+static DWORD GetWindowsBuildNumber()
+{
+	typedef LONG (WINAPI* RtlGetVersion_t)(OSVERSIONINFOEXW*);
+	HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+	RtlGetVersion_t rtlGetVersion = ntdll == NULL ? NULL :
+		reinterpret_cast<RtlGetVersion_t>(GetProcAddress(ntdll, "RtlGetVersion"));
+	if (rtlGetVersion == NULL)
+		return 0;
+
+	OSVERSIONINFOEXW version = {};
+	version.dwOSVersionInfoSize = sizeof(version);
+	return rtlGetVersion(&version) == 0 ? version.dwBuildNumber : 0;
+}
+
 // Pointer to DWM's OverlayTestMode global variable (found from OverlaysEnabled AOB)
 static int* g_pOverlayTestMode = NULL;
+static int g_originalOverlayTestMode = 0;
+static bool g_overlayTestModeSaved = false;
 
 bool aob_match_inverse(const void* buf1, const void* mask, const int buf_len)
 {
@@ -1312,43 +1328,18 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 			MODULEINFO moduleInfo;
 			GetModuleInformation(GetCurrentProcess(), dwmcore, &moduleInfo, sizeof moduleInfo);
 
-			OSVERSIONINFOEX versionInfo;
-			ZeroMemory(&versionInfo, sizeof OSVERSIONINFOEX);
-			versionInfo.dwOSVersionInfoSize = sizeof OSVERSIONINFOEX;
-			versionInfo.dwBuildNumber = 22000;
+			const DWORD buildNumber = GetWindowsBuildNumber();
+			if (buildNumber == 0)
+				return FALSE;
 
-			// Version info for windows 11 24h2
-			OSVERSIONINFOEX versionInfo24h2;
-			ZeroMemory(&versionInfo24h2, sizeof OSVERSIONINFOEX);
-			versionInfo24h2.dwOSVersionInfoSize = sizeof OSVERSIONINFOEX;
-			versionInfo24h2.dwBuildNumber = 26100;
+			// Match exact servicing families. Treating every future build as 25H2 is
+			// dangerous because these offsets point into undocumented DWM objects.
+			isWindows11_25h2 = buildNumber == 26200;
+			isWindows11_24h2 = buildNumber == 26100;
+			isWindows11 = buildNumber >= 22000 && buildNumber < 26100;
 
-			// Version info for windows 11 25h2
-			OSVERSIONINFOEX versionInfo25h2;
-			ZeroMemory(&versionInfo25h2, sizeof OSVERSIONINFOEX);
-			versionInfo25h2.dwOSVersionInfoSize = sizeof OSVERSIONINFOEX;
-			versionInfo25h2.dwBuildNumber = 26200;
-
-
-			ULONGLONG dwlConditionMask = 0;
-			VER_SET_CONDITION(dwlConditionMask, VER_BUILDNUMBER, VER_GREATER_EQUAL);
-
-			if (VerifyVersionInfo(&versionInfo25h2, VER_BUILDNUMBER, dwlConditionMask))
-			{
-				isWindows11_25h2 = true;
-			}
-			else if (VerifyVersionInfo(&versionInfo24h2, VER_BUILDNUMBER, dwlConditionMask))
-			{
-				isWindows11_24h2 = true;
-			}
-			else if (VerifyVersionInfo(&versionInfo, VER_BUILDNUMBER, dwlConditionMask))
-			{
-				isWindows11 = true;
-			}
-			else
-			{
-				isWindows11 = false;
-			}
+			if (buildNumber > 26200)
+				return FALSE;
 
 			if (isWindows11_25h2)
 			{
@@ -1516,35 +1507,68 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 			{
 				return FALSE;
 			}
-			if ((COverlayContext_Present_orig && COverlayContext_IsCandidateDirectFlipCompatbile_orig &&
-				COverlayContext_OverlaysEnabled_orig) || 
-				(COverlayContext_Present_orig_24h2 && COverlayContext_IsCandidateDirectFlipCompatbile_orig_24h2 && COverlayContext_OverlaysEnabled_orig) && numLuts != 0)
+			// Present is the only hook required to apply a LUT. The DirectFlip and
+			// OverlaysEnabled helpers are private DWM implementation details and have
+			// changed independently in cumulative updates. Keep them optional on the
+			// modern path so an unrelated signature change does not prevent the DLL
+			// from loading at all.
+			const bool foundPresent = isWindows11_24h2 || isWindows11_25h2
+				? COverlayContext_Present_orig_24h2 != NULL
+				: COverlayContext_Present_orig != NULL;
+
+			if (foundPresent && numLuts != 0)
 
 			{
-				MH_Initialize();
+				if (MH_Initialize() != MH_OK)
+				{
+					return FALSE;
+				}
 				if (!isWindows11_24h2 && !isWindows11_25h2)
-					MH_CreateHook((PVOID)COverlayContext_Present_orig, (PVOID)COverlayContext_Present_hook,
-								  (PVOID*)&COverlayContext_Present_orig);
+				{
+					if (MH_CreateHook((PVOID)COverlayContext_Present_orig, (PVOID)COverlayContext_Present_hook,
+						(PVOID*)&COverlayContext_Present_orig) != MH_OK)
+					{
+						MH_Uninitialize();
+						return FALSE;
+					}
+				}
 				else
-					MH_CreateHook((PVOID)COverlayContext_Present_orig_24h2, (PVOID)COverlayContext_Present_hook_24h2,
-						(PVOID*)&COverlayContext_Present_orig_24h2);
+				{
+					if (MH_CreateHook((PVOID)COverlayContext_Present_orig_24h2, (PVOID)COverlayContext_Present_hook_24h2,
+						(PVOID*)&COverlayContext_Present_orig_24h2) != MH_OK)
+					{
+						MH_Uninitialize();
+						return FALSE;
+					}
+				}
 
-				if (!isWindows11_24h2 && !isWindows11_25h2)
+				if (!isWindows11_24h2 && !isWindows11_25h2 &&
+					COverlayContext_IsCandidateDirectFlipCompatbile_orig != NULL)
 					MH_CreateHook((PVOID)COverlayContext_IsCandidateDirectFlipCompatbile_orig,
 								  (PVOID)COverlayContext_IsCandidateDirectFlipCompatbile_hook,
 								  (PVOID*)&COverlayContext_IsCandidateDirectFlipCompatbile_orig);
-				else
+				else if ((isWindows11_24h2 || isWindows11_25h2) &&
+					COverlayContext_IsCandidateDirectFlipCompatbile_orig_24h2 != NULL)
 					MH_CreateHook((PVOID)COverlayContext_IsCandidateDirectFlipCompatbile_orig_24h2,
 						(PVOID)COverlayContext_IsCandidateDirectFlipCompatbile_hook_24h2,
 						(PVOID*)&COverlayContext_IsCandidateDirectFlipCompatbile_orig_24h2);
-				MH_CreateHook((PVOID)COverlayContext_OverlaysEnabled_orig, (PVOID)COverlayContext_OverlaysEnabled_hook,
-				              (PVOID*)&COverlayContext_OverlaysEnabled_orig);
-				MH_EnableHook(MH_ALL_HOOKS);
+
+				if (COverlayContext_OverlaysEnabled_orig != NULL)
+					MH_CreateHook((PVOID)COverlayContext_OverlaysEnabled_orig, (PVOID)COverlayContext_OverlaysEnabled_hook,
+						(PVOID*)&COverlayContext_OverlaysEnabled_orig);
+
+				if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK)
+				{
+					MH_Uninitialize();
+					return FALSE;
+				}
 				LOG_ONLY_ONCE("DWM HOOK DLL INITIALIZATION. START LOGGING")
 
 				// Disable DirectFlip/MPO by setting DWM's internal OverlayTestMode to 5
 				if (g_pOverlayTestMode != NULL)
 				{
+					g_originalOverlayTestMode = *g_pOverlayTestMode;
+					g_overlayTestModeSaved = true;
 					*g_pOverlayTestMode = 5;
 					LOG_ONLY_ONCE("Set OverlayTestMode global to 5 in DWM memory")
 				}
@@ -1555,9 +1579,9 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 		}
 	case DLL_PROCESS_DETACH:
 		// Restore OverlayTestMode
-		if (g_pOverlayTestMode != NULL)
+		if (g_pOverlayTestMode != NULL && g_overlayTestModeSaved)
 		{
-			*g_pOverlayTestMode = 0;
+			*g_pOverlayTestMode = g_originalOverlayTestMode;
 		}
 		MH_Uninitialize();
 		Sleep(100);

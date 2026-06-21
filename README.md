@@ -1,6 +1,18 @@
-# A fork of the [original dwm_lut](https://github.com/ledoge/dwm_lut) which works also on **Windows 11**
-## [Download latest pre-release (supports Windows 24H2 now)](https://github.com/lauralex/dwm_lut/releases/download/v4.0.2/Release24h2.zip)
-If you encounter problems with the 4.0.2 version, download the [3.9.6](https://github.com/lauralex/dwm_lut/releases/download/v3.9.6/Release.zip) version.
+# dwm_lut for current Windows 11 builds
+
+Maintenance update of [ledoge/dwm_lut](https://github.com/ledoge/dwm_lut), based on
+the lauralex 24H2 port and updated for the Windows 11 25H2 build 26200
+servicing family.
+
+The 25H2 path uses the current DWM `COverlayContext::Present` layout and obtains
+the D3D11 back buffer through the overlay swap-chain vtable. DirectFlip/MPO helper
+hooks are intentionally optional: a cumulative update that changes one of those
+private functions no longer prevents LUT injection from initializing.
+
+> [!CAUTION]
+> This software injects a DLL into `dwm.exe` and hooks undocumented Windows
+> internals. A future cumulative update can still break it. Disable it before a
+> Windows feature update and keep a normal desktop recovery path available.
 
 ## Dependencies
 - Visual C++ runtime (https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)
@@ -8,7 +20,18 @@ If you encounter problems with the 4.0.2 version, download the [3.9.6](https://g
 # About
 This tool applies 3D LUTs to the Windows desktop by hooking into DWM. It works in both SDR and HDR modes, and uses tetrahedral interpolation on the LUT data. In SDR, blue-noise dithering is applied to the output to reduce banding.
 
-Right now it should work on any 20H2 or 21H1 build of Windows 10, and also the current build of Windows 11, and I'll try to update it whenever a new version breaks it.
+Compatibility targets:
+
+- Windows 11 25H2, build 26200.x (including the June 2026 KB5094126 family)
+- Windows 11 24H2, build 26100.x
+- Earlier Windows 11 and the Windows 10 versions supported by the upstream fork
+
+Windows 11 26H1 (build 28000) is deliberately rejected rather than being treated
+as 25H2: its private DWM layout has not been verified.
+
+The 25H2 signatures and offsets were tested by the contributing patch author on
+build 26200 with two 2560x1440 displays. Source-level verification is possible on
+other platforms, but runtime validation must be done on the target Windows build.
 
 # Usage
 Use DisplayCAL or similar to generate .cube LUT files of any size, run `DwmLutGUI.exe`, assign them to monitors and then click Apply. Note that LUTs cannot be applied to monitors that are in "Duplicate" mode.

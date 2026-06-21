@@ -1,5 +1,7 @@
 # dwm_lut for current Windows 11 builds
 
+See [CHANGELOG.md](CHANGELOG.md) for the v4.1.0 compatibility and safety changes.
+
 Maintenance update of [ledoge/dwm_lut](https://github.com/ledoge/dwm_lut), based on
 the lauralex 24H2 port and updated for the Windows 11 25H2 build 26200
 servicing family.

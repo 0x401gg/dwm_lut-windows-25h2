@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -144,6 +145,33 @@ namespace DwmLutGUI
             }
 
             base.OnStateChanged(e);
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            // Closing the GUI must never silently leave our DLL in dwm.exe.
+            // Keep the window alive if unloading fails so the user can retry.
+            if (_viewModel != null)
+            {
+                try
+                {
+                    HideAntiDirectFlipOverlay();
+                    _viewModel.Uninject();
+                }
+                catch (Exception x)
+                {
+                    e.Cancel = true;
+                    MessageBox.Show(
+                        "Could not disable dwm_lut, so the app will remain open. " +
+                        "Try Disable again or restart Windows.\n\n" + x.Message,
+                        "dwm_lut is still active",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
+            base.OnClosing(e);
         }
 
         private void UpdateContextMenu()

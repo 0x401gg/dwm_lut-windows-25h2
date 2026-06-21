@@ -43,6 +43,12 @@ HDR LUTs must use BT.2020 + SMPTE ST 2084 values as input and output.
 
 Minimizing the GUI will make it disappear from the taskbar, and you can use the context menu of the tray icon to quickly apply or disable all LUTs. For automation, you can start the exe with any (sensible) combination of `-apply`,  `-disable`, `-minimize` and `-exit` as arguments.
 
+Closing the window or choosing **Exit** disables the LUT and unloads the DLL from
+DWM first. If unloading fails, shutdown is cancelled and a warning is shown.
+Minimizing to the tray keeps the LUT active. Consequently, `-apply -exit` applies
+and then immediately disables the LUT; use `-apply -minimize` for a persistent
+automated session.
+
 Note: DirectFlip and MPO get force disabled on monitors with an active LUT. These features are designed to improve performance for some windowed applications by allowing them to bypass DWM (and therefore also the LUT). This ensures that LUTs get applied properly to all applications (except exclusive fullscreen ones).
 
 # Compiling

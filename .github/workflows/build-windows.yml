@@ -1,0 +1,81 @@
+name: Build Windows test package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-windows.yml"
+      - "DwmLutGUI/**"
+      - "lutdwm/**"
+      - "lutdwm.sln"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Release x64
+    runs-on: windows-2022
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Add NuGet to PATH
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore GUI packages
+        run: nuget restore DwmLutGUI/DwmLutGUI.sln -PackagesDirectory DwmLutGUI/packages
+
+      - name: Install native dependencies
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install `
+            --x-manifest-root="$env:GITHUB_WORKSPACE/lutdwm" `
+            --triplet=x64-windows-static
+
+      - name: Build native DLL
+        shell: pwsh
+        run: |
+          msbuild lutdwm.sln /m `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:VcpkgRoot="$env:VCPKG_INSTALLATION_ROOT/" `
+            /p:OutDir="$env:GITHUB_WORKSPACE/build/native/"
+
+      - name: Build GUI
+        shell: pwsh
+        run: |
+          msbuild DwmLutGUI/DwmLutGUI.sln /m `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:OutDir="$env:GITHUB_WORKSPACE/build/package/"
+
+      - name: Assemble test package
+        shell: pwsh
+        run: |
+          $package = "$env:GITHUB_WORKSPACE/build/package"
+          $dll = "$env:GITHUB_WORKSPACE/build/native/dwm_lut.dll"
+          if (!(Test-Path "$package/DwmLutGUI.exe")) {
+            throw "DwmLutGUI.exe was not produced"
+          }
+          if (!(Test-Path $dll)) {
+            throw "dwm_lut.dll was not produced"
+          }
+          Copy-Item $dll $package
+          Copy-Item README.md, CHANGELOG.md, LICENSE, LICENSE-THIRD-PARTY $package
+          Compress-Archive -Path "$package/*" `
+            -DestinationPath "$env:GITHUB_WORKSPACE/build/dwm_lut-v4.1.0-windows-x64-UNTESTED.zip"
+
+      - name: Upload test package
+        uses: actions/upload-artifact@v7
+        with:
+          name: dwm_lut-v4.1.0-windows-x64-UNTESTED
+          path: build/dwm_lut-v4.1.0-windows-x64-UNTESTED.zip
+          if-no-files-found: error
+          retention-days: 14

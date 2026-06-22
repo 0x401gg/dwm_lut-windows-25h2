@@ -38,6 +38,7 @@ jobs:
           & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install `
             --x-manifest-root="$env:GITHUB_WORKSPACE/lutdwm" `
             --triplet=x64-windows-static
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" integrate install
 
       - name: Build native DLL
         shell: pwsh

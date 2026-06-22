@@ -70,6 +70,7 @@ jobs:
           }
           Copy-Item $dll $package
           Copy-Item README.md, CHANGELOG.md, LICENSE, LICENSE-THIRD-PARTY $package
+          Copy-Item examples/TEST-red-blue-swap.cube $package
           Compress-Archive -Path "$package/*" `
             -DestinationPath "$env:GITHUB_WORKSPACE/build/dwm_lut-v4.1.0-windows-x64-UNTESTED.zip"
 

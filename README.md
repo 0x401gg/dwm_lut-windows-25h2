@@ -56,6 +56,11 @@ other platforms, but runtime validation must be done on the target Windows build
 # Usage
 Use DisplayCAL or similar to generate .cube LUT files of any size, run `DwmLutGUI.exe`, assign them to monitors and then click Apply. Note that LUTs cannot be applied to monitors that are in "Duplicate" mode.
 
+For a quick SDR functionality check, use
+[`examples/TEST-red-blue-swap.cube`](examples/TEST-red-blue-swap.cube). It
+deliberately swaps red and blue so activation is visually obvious. It is not a
+calibration profile.
+
 
 For ColourSpace users with HT license level, 65^3 eeColor LUT .txt files are also supported.
 

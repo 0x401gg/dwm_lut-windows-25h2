@@ -1,0 +1,17 @@
+TITLE "TEST ONLY - Red Blue Channel Swap"
+
+# Deliberately swaps red and blue so activation is visually obvious.
+# This is a functional test LUT, not a calibration profile.
+LUT_3D_SIZE 2
+
+DOMAIN_MIN 0.0 0.0 0.0
+DOMAIN_MAX 1.0 1.0 1.0
+
+0.0 0.0 0.0
+0.0 0.0 1.0
+0.0 1.0 0.0
+0.0 1.0 1.0
+1.0 0.0 0.0
+1.0 0.0 1.0
+1.0 1.0 0.0
+1.0 1.0 1.0

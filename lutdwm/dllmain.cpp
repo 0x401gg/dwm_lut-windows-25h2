@@ -22,7 +22,7 @@
 #define _STRINGIFY(x) #x
 #define STRINGIFY(x) _STRINGIFY(x)
 #define RESIZE(x, y) realloc(x, (y) * sizeof(*x));
-#define LOG_FILE_PATH R"(C:\DWMLOG\dwm.log)"
+#define LOG_FILE_PATH R"(%TEMP%\dwm_lut.log)"
 #define MAX_LOG_FILE_SIZE 20 * 1024 * 1024
 #ifdef _DEBUG
 #define DEBUG_MODE true
@@ -79,18 +79,27 @@
 	}
 
 #else
-#define LOG_ONLY_ONCE(x) // NOP, not in debug mode
+#define __LOG_ONLY_ONCE(x, y) if (static bool first_log_##y = true) { log_to_file(x); first_log_##y = false; }
+#define _LOG_ONLY_ONCE(x, y) __LOG_ONLY_ONCE(x, y)
+#define LOG_ONLY_ONCE(x) _LOG_ONLY_ONCE(x, __COUNTER__)
 #define MESSAGE_BOX_DBG(x, y) // NOP, not in debug mode
 #define EXECUTE_WITH_LOG(winapi_func_hr) winapi_func_hr;
 #define EXECUTE_D3DCOMPILE_WITH_LOG(winapi_func_hr, error_interface) winapi_func_hr;
-#define LOG_ADDRESS(prefix_message, address) // NOP, not in debug mode
+#define LOG_ADDRESS(prefix_message, address) \
+	{ \
+		std::stringstream ss; \
+		ss << prefix_message << " 0x" << std::setw(sizeof(address) * 2) << std::setfill('0') << std::hex << (UINT_PTR)address; \
+		log_to_file(ss.str().c_str()); \
+	}
 #endif
 
 
-#if DEBUG_MODE == true
 void log_to_file(const char* log_buf)
 {
-	FILE* pFile = fopen(LOG_FILE_PATH, "a");
+	char logFilePath[MAX_PATH];
+	ExpandEnvironmentStringsA(LOG_FILE_PATH, logFilePath, sizeof(logFilePath));
+
+	FILE* pFile = fopen(logFilePath, "a");
 	if (pFile == NULL)
 	{
 		return;
@@ -122,7 +131,6 @@ void print_error(const char* prefix_message)
 	log_to_file(message_buf);
 	return;
 }
-#endif
 
 
 unsigned int lut_index(const unsigned int b, const unsigned int g, const unsigned int r, const unsigned int c,
@@ -651,6 +659,10 @@ lutData* GetLUTDataFromCOverlayContext(void* context, bool hdr)
 		float* rect = (float*)((unsigned char*)realObj + 0x7698);
 		left = (int)rect[0];
 		top = (int)rect[1];
+
+		char message_buf[160];
+		sprintf(message_buf, "25H2 LUT lookup: context=0x%p realObj=0x%p left=%d top=%d hdr=%d", context, realObj, left, top, hdr);
+		LOG_ONLY_ONCE(message_buf)
 	}
 	else if (isWindows11_24h2)
 	{
@@ -689,6 +701,9 @@ lutData* GetLUTDataFromCOverlayContext(void* context, bool hdr)
 	{
 		if (luts[i].left == left && luts[i].top == top && luts[i].isHdr == hdr)
 		{
+			char message_buf[160];
+			sprintf(message_buf, "Matched LUT: monitor left=%d top=%d hdr=%d lutSize=%u", left, top, hdr, luts[i].size);
+			LOG_ONLY_ONCE(message_buf)
 			return &luts[i];
 		}
 	}
@@ -701,8 +716,23 @@ lutData* GetLUTDataFromCOverlayContext(void* context, bool hdr)
 		{
 			if (luts[i].left == left && luts[i].top == top && luts[i].isHdr != hdr)
 			{
+				char message_buf[160];
+				sprintf(message_buf, "Matched 25H2 primary HDR fallback LUT: left=%d top=%d requestedHdr=%d lutHdr=%d", left, top, hdr, luts[i].isHdr);
+				LOG_ONLY_ONCE(message_buf)
 				return &luts[i];
 			}
+		}
+	}
+
+	if (isWindows11_25h2)
+	{
+		char message_buf[256];
+		sprintf(message_buf, "No LUT match: left=%d top=%d hdr=%d numLuts=%d", left, top, hdr, numLuts);
+		LOG_ONLY_ONCE(message_buf)
+		for (int i = 0; i < numLuts; i++)
+		{
+			sprintf(message_buf, "Configured LUT[%d]: left=%d top=%d hdr=%d size=%u", i, luts[i].left, luts[i].top, luts[i].isHdr, luts[i].size);
+			LOG_ONLY_ONCE(message_buf)
 		}
 	}
 
@@ -908,6 +938,10 @@ bool RenderLUT(void* cOverlayContext, ID3D11Texture2D* backBuffer, struct tagREC
 	D3D11_TEXTURE2D_DESC newBackBufferDesc;
 	backBuffer->GetDesc(&newBackBufferDesc);
 
+	char desc_message[256];
+	sprintf(desc_message, "RenderLUT: format=%u width=%u height=%u numRects=%d", newBackBufferDesc.Format, newBackBufferDesc.Width, newBackBufferDesc.Height, numRects);
+	LOG_ONLY_ONCE(desc_message)
+
 	int index = -1;
 	if (newBackBufferDesc.Format == DXGI_FORMAT_B8G8R8A8_UNORM)
 	{
@@ -1095,37 +1129,72 @@ static ID3D11Texture2D* GetBackBuffer_25H2(void* overlaySwapChain)
 {
 	__try
 	{
-		if (!overlaySwapChain) return NULL;
+		if (!overlaySwapChain)
+		{
+			LOG_ONLY_ONCE("25H2 back-buffer lookup failed: overlaySwapChain is null")
+			return NULL;
+		}
 
 		void** vt = *(void***)overlaySwapChain;
-		if (!vt) return NULL;
+		if (!vt)
+		{
+			LOG_ONLY_ONCE("25H2 back-buffer lookup failed: overlaySwapChain vtable is null")
+			return NULL;
+		}
 
 		typedef void* (__fastcall *VirtFunc)(void*);
 
 		VirtFunc func1 = (VirtFunc)vt[24];
-		if (!func1) return NULL;
+		if (!func1)
+		{
+			LOG_ONLY_ONCE("25H2 back-buffer lookup failed: vt[24] is null")
+			return NULL;
+		}
 
 		void* r1 = func1(overlaySwapChain);
-		if (!r1) return NULL;
+		if (!r1)
+		{
+			LOG_ONLY_ONCE("25H2 back-buffer lookup failed: vt[24]() returned null")
+			return NULL;
+		}
 
 		void** vt2 = *(void***)r1;
-		if (!vt2) return NULL;
+		if (!vt2)
+		{
+			LOG_ONLY_ONCE("25H2 back-buffer lookup failed: second vtable is null")
+			return NULL;
+		}
 
 		VirtFunc func2 = (VirtFunc)vt2[19];
-		if (!func2) return NULL;
+		if (!func2)
+		{
+			LOG_ONLY_ONCE("25H2 back-buffer lookup failed: vt2[19] is null")
+			return NULL;
+		}
 
 		void* r2 = func2(r1);
-		if (!r2) return NULL;
+		if (!r2)
+		{
+			LOG_ONLY_ONCE("25H2 back-buffer lookup failed: vt2[19]() returned null")
+			return NULL;
+		}
 
 		ID3D11Texture2D* tex = NULL;
 		HRESULT hr = ((IUnknown*)r2)->QueryInterface(IID_ID3D11Texture2D, (void**)&tex);
-		if (FAILED(hr) || !tex) return NULL;
+		if (FAILED(hr) || !tex)
+		{
+			char message_buf[160];
+			sprintf(message_buf, "25H2 back-buffer lookup failed: QI(ID3D11Texture2D) hr=0x%08X tex=0x%p", hr, tex);
+			LOG_ONLY_ONCE(message_buf)
+			return NULL;
+		}
 
 		LOG_ONLY_ONCE("25H2: Got texture via overlaySwapChain->vt[24]()->vt2[19]()->QI")
 		return tex;
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
+		LOG_ONLY_ONCE("25H2 back-buffer lookup failed: structured exception")
 		return NULL;
 	}
 }
@@ -1332,6 +1401,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 			if (buildNumber == 0)
 				return FALSE;
 
+			char startupMessage[256];
+			sprintf(startupMessage, "DWM LUT loading: build=%lu", buildNumber);
+			LOG_ONLY_ONCE(startupMessage)
+
 			// Match exact servicing families. Treating every future build as 25H2 is
 			// dangerous because these offsets point into undocumented DWM objects.
 			isWindows11_25h2 = buildNumber == 26200;
@@ -1515,6 +1588,12 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 			const bool foundPresent = isWindows11_24h2 || isWindows11_25h2
 				? COverlayContext_Present_orig_24h2 != NULL
 				: COverlayContext_Present_orig != NULL;
+
+			sprintf(startupMessage, "DWM LUT signatures: foundPresent=%d present24=0x%p presentLegacy=0x%p directFlip24=0x%p overlays=0x%p overlayTestMode=0x%p numLuts=%d",
+				foundPresent, COverlayContext_Present_orig_24h2, COverlayContext_Present_orig,
+				COverlayContext_IsCandidateDirectFlipCompatbile_orig_24h2, COverlayContext_OverlaysEnabled_orig,
+				g_pOverlayTestMode, numLuts);
+			LOG_ONLY_ONCE(startupMessage)
 
 			if (foundPresent && numLuts != 0)
 

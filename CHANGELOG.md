@@ -4,6 +4,19 @@ All notable changes to this maintenance fork are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Release-build diagnostics written from inside `dwm.exe` to
+  `%TEMP%\dwm_lut.log`.
+- 25H2 logging for Present hook entry, back-buffer lookup, texture format,
+  monitor coordinate lookup, and configured LUT matching.
+
+### Known limitations
+
+- User testing on a GeForce laptop with Windows 11 25H2 build 26200.8457
+  confirmed that injection succeeds but the visible LUT effect does not apply.
+  Treat the current 25H2 build as diagnostic-only until the DWM path is fixed.
+
 ## [4.1.0] - 2026-06-20
 
 ### Added

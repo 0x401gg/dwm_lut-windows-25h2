@@ -1,8 +1,9 @@
 # dwm_lut for current Windows 11 builds
 
 > [!WARNING]
-> **Untested:** this exact v4.1.0 fork has not yet been built or runtime-tested
-> on Windows. Use it experimentally and keep a recovery path available.
+> **Experimental / not working yet on tested 25H2 systems:** this fork injects
+> into DWM on Windows 11 25H2, but the LUT effect has not been observed on
+> tested builds including 26200.8457. Use it only for diagnostics right now.
 
 > Vibe-coded with Codex 5.5.
 
@@ -60,6 +61,17 @@ For a quick SDR functionality check, use
 [`examples/TEST-red-blue-swap.cube`](examples/TEST-red-blue-swap.cube). It
 deliberately swaps red and blue so activation is visually obvious. It is not a
 calibration profile.
+
+## Troubleshooting / diagnostics
+
+Current diagnostic builds write a one-time DWM hook log to:
+
+`%TEMP%\dwm_lut.log`
+
+If the GUI says **Active** but the display color does not change, that only means
+`dwm_lut.dll` loaded into `dwm.exe`; it does not prove the LUT shader reached the
+visible desktop frame. Reproduce the issue, then check the log for whether the
+25H2 Present hook, back-buffer lookup, and monitor LUT lookup succeeded.
 
 
 For ColourSpace users with HT license level, 65^3 eeColor LUT .txt files are also supported.

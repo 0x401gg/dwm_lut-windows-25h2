@@ -277,11 +277,11 @@ namespace DwmLutGUI
                 IsActive = (bool)status;
                 if (status == true)
                 {
-                    ActiveText = "Active" + (_configChanged ? " (changed)" : "");
+                    ActiveText = "Injected" + (_configChanged ? " (changed)" : "");
                 }
                 else
                 {
-                    ActiveText = "Inactive";
+                    ActiveText = "Disabled";
                 }
             }
             else

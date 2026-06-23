@@ -4,7 +4,18 @@ All notable changes to this maintenance fork are documented here.
 
 ## [Unreleased]
 
-No unreleased changes.
+### Added
+
+- Modernized WPF dashboard UI with dark cards, clearer controls, and a status
+  pill.
+- Added **Load included SDR test LUT** to assign the bundled red/blue test LUT
+  without browsing manually.
+- Added **Open Log** to open `dwm_lut.log` from the executable folder.
+
+### Changed
+
+- Renamed the GUI status text from `Active`/`Inactive` to
+  `Injected`/`Disabled` to better describe what the status check actually means.
 
 ## [4.1.0] - 2026-06-22
 

@@ -237,6 +237,55 @@ namespace DwmLutGUI
             _viewModel.HdrLutPath = "None";
         }
 
+        private void LoadTestLut_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_viewModel.SelectedMonitor == null)
+                {
+                    _viewModel.SelectedMonitor = _viewModel.Monitors.FirstOrDefault();
+                }
+
+                if (_viewModel.SelectedMonitor == null)
+                {
+                    MessageBox.Show("No active display was detected.");
+                    return;
+                }
+
+                var testLutPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TEST-red-blue-swap.cube");
+                if (!File.Exists(testLutPath))
+                {
+                    MessageBox.Show("TEST-red-blue-swap.cube was not found next to DwmLutGUI.exe.");
+                    return;
+                }
+
+                _viewModel.SdrLutPath = testLutPath;
+            }
+            catch (Exception x)
+            {
+                MessageBox.Show(x.Message);
+            }
+        }
+
+        private void OpenLog_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dwm_lut.log");
+                if (File.Exists(logPath))
+                {
+                    Process.Start(logPath);
+                    return;
+                }
+
+                Process.Start(AppDomain.CurrentDomain.BaseDirectory);
+            }
+            catch (Exception x)
+            {
+                MessageBox.Show(x.Message);
+            }
+        }
+
         private void Disable_Click(object sender, RoutedEventArgs e)
         {
             try

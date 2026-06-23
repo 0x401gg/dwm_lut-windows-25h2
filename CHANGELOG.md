@@ -17,6 +17,9 @@ All notable changes to this maintenance fork are documented here.
   26200.8457, the previous 25H2 path read the composed surface size
   (`1366,768`) as the monitor position, so it could not match the configured
   primary display LUT at (`0,0`).
+- Added a 25H2 single-LUT fallback for single-monitor/single-mode setups. If
+  exact coordinate matching fails but only one SDR or HDR LUT is configured for
+  the current mode, that LUT is applied instead of silently doing nothing.
 
 ### Known limitations
 

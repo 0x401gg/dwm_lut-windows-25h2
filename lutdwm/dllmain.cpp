@@ -728,6 +728,33 @@ lutData* GetLUTDataFromCOverlayContext(void* context, bool hdr)
 		}
 	}
 
+	// 25H2 single-monitor safety fallback: if the DWM coordinate layout changes
+	// again but the user only configured one LUT for the current SDR/HDR mode,
+	// apply that LUT instead of silently doing nothing. Avoid this on multi-LUT
+	// setups so we do not apply the wrong display's calibration.
+	if (isWindows11_25h2)
+	{
+		lutData* singleModeLut = NULL;
+		int matchingModeLuts = 0;
+		for (int i = 0; i < numLuts; i++)
+		{
+			if (luts[i].isHdr == hdr)
+			{
+				singleModeLut = &luts[i];
+				matchingModeLuts++;
+			}
+		}
+
+		if (matchingModeLuts == 1 && singleModeLut != NULL)
+		{
+			char message_buf[192];
+			sprintf(message_buf, "25H2 single-LUT fallback: using configured LUT left=%d top=%d hdr=%d for detected left=%d top=%d",
+				singleModeLut->left, singleModeLut->top, hdr, left, top);
+			LOG_ONLY_ONCE(message_buf)
+			return singleModeLut;
+		}
+	}
+
 	if (isWindows11_25h2)
 	{
 		char message_buf[256];

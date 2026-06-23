@@ -23,6 +23,7 @@
 #define STRINGIFY(x) _STRINGIFY(x)
 #define RESIZE(x, y) realloc(x, (y) * sizeof(*x));
 #define LOG_FILE_PATH R"(%TEMP%\dwm_lut.log)"
+#define LOG_PATH_FILE R"(%SYSTEMROOT%\Temp\dwm_lut_log_path.txt)"
 #define MAX_LOG_FILE_SIZE 20 * 1024 * 1024
 #ifdef _DEBUG
 #define DEBUG_MODE true
@@ -98,6 +99,23 @@ void log_to_file(const char* log_buf)
 {
 	char logFilePath[MAX_PATH];
 	ExpandEnvironmentStringsA(LOG_FILE_PATH, logFilePath, sizeof(logFilePath));
+
+	char logPathFile[MAX_PATH];
+	ExpandEnvironmentStringsA(LOG_PATH_FILE, logPathFile, sizeof(logPathFile));
+	FILE* pPathFile = fopen(logPathFile, "r");
+	if (pPathFile != NULL)
+	{
+		char configuredLogFilePath[MAX_PATH];
+		if (fgets(configuredLogFilePath, sizeof(configuredLogFilePath), pPathFile) != NULL)
+		{
+			configuredLogFilePath[strcspn(configuredLogFilePath, "\r\n")] = '\0';
+			if (configuredLogFilePath[0] != '\0')
+			{
+				strcpy_s(logFilePath, configuredLogFilePath);
+			}
+		}
+		fclose(pPathFile);
+	}
 
 	FILE* pFile = fopen(logFilePath, "a");
 	if (pFile == NULL)

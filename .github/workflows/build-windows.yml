@@ -61,6 +61,7 @@ jobs:
         shell: pwsh
         run: |
           $package = "$env:GITHUB_WORKSPACE/build/package"
+          $dist = "$env:GITHUB_WORKSPACE/build/dist"
           $dll = "$env:GITHUB_WORKSPACE/build/native/dwm_lut.dll"
           if (!(Test-Path "$package/DwmLutGUI.exe")) {
             throw "DwmLutGUI.exe was not produced"
@@ -68,16 +69,29 @@ jobs:
           if (!(Test-Path $dll)) {
             throw "dwm_lut.dll was not produced"
           }
-          Copy-Item $dll $package
-          Copy-Item README.md, CHANGELOG.md, LICENSE, LICENSE-THIRD-PARTY $package
-          Copy-Item examples/TEST-red-blue-swap.cube $package
-          Compress-Archive -Path "$package/*" `
-            -DestinationPath "$env:GITHUB_WORKSPACE/build/dwm_lut-v4.1.0-windows-x64-UNTESTED.zip"
+          New-Item -ItemType Directory -Force $dist | Out-Null
+          Copy-Item "$package/DwmLutGUI.exe" $dist
+          Copy-Item "$package/DwmLutGUI.exe.config" $dist
+          Copy-Item "$package/WindowsDisplayAPI.dll" $dist
+          Copy-Item $dll $dist
+          Copy-Item examples/TEST-red-blue-swap.cube $dist
+          @"
+          dwm_lut Windows 11 25H2 test build
+
+          1. Extract this ZIP.
+          2. Run DwmLutGUI.exe as Administrator.
+          3. Select TEST-red-blue-swap.cube as the SDR LUT and click Apply.
+          4. Diagnostics are written beside DwmLutGUI.exe as dwm_lut.log.
+
+          Keep all files in this folder together. Do not copy dwm_lut.dll to System32.
+          "@ | Set-Content "$dist/README-test-build.txt" -Encoding UTF8
+          Compress-Archive -Path "$dist/*" `
+            -DestinationPath "$env:GITHUB_WORKSPACE/build/dwm_lut-v4.1.0-windows-x64-test.zip"
 
       - name: Upload test package
         uses: actions/upload-artifact@v7
         with:
-          name: dwm_lut-v4.1.0-windows-x64-UNTESTED
-          path: build/dwm_lut-v4.1.0-windows-x64-UNTESTED.zip
+          name: dwm_lut-v4.1.0-windows-x64-test
+          path: build/dwm_lut-v4.1.0-windows-x64-test.zip
           if-no-files-found: error
           retention-days: 14

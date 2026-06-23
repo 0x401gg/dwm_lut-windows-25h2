@@ -15,6 +15,7 @@ namespace DwmLutGUI
         private static readonly string DllName;
         private static readonly string DllPath;
         private static readonly string LutsPath;
+        private static readonly string LogPathFilePath;
         private static readonly IntPtr LoadlibraryA;
         private static readonly IntPtr FreeLibrary;
 
@@ -24,6 +25,7 @@ namespace DwmLutGUI
             DllName = "dwm_lut.dll";
             DllPath = basePath + DllName;
             LutsPath = basePath + "luts\\";
+            LogPathFilePath = basePath + "dwm_lut_log_path.txt";
 
             var kernel32 = GetModuleHandle("kernel32.dll");
             LoadlibraryA = GetProcAddress(kernel32, "LoadLibraryA");
@@ -119,6 +121,9 @@ namespace DwmLutGUI
         {
             File.Copy(AppDomain.CurrentDomain.BaseDirectory + DllName, DllPath, true);
             ClearPermissions(DllPath);
+
+            File.WriteAllText(LogPathFilePath, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dwm_lut.log"));
+            ClearPermissions(LogPathFilePath);
 
             if (Directory.Exists(LutsPath))
             {

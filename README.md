@@ -64,9 +64,9 @@ calibration profile.
 
 ## Troubleshooting / diagnostics
 
-Current diagnostic builds write a one-time DWM hook log to:
+Current diagnostic builds write a one-time DWM hook log beside the GUI:
 
-`%TEMP%\dwm_lut.log`
+`dwm_lut.log` in the same folder as `DwmLutGUI.exe`
 
 If the GUI says **Active** but the display color does not change, that only means
 `dwm_lut.dll` loaded into `dwm.exe`; it does not prove the LUT shader reached the

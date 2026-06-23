@@ -6,10 +6,12 @@ All notable changes to this maintenance fork are documented here.
 
 ### Added
 
-- Release-build diagnostics written from inside `dwm.exe` to
-  `%TEMP%\dwm_lut.log`.
+- Release-build diagnostics written from inside `dwm.exe` to `dwm_lut.log`
+  beside `DwmLutGUI.exe`.
 - 25H2 logging for Present hook entry, back-buffer lookup, texture format,
   monitor coordinate lookup, and configured LUT matching.
+- A lean test package containing only the runtime files required to use the app,
+  the visible test LUT, and a short test-build readme.
 
 ### Fixed
 

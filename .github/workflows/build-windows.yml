@@ -1,4 +1,4 @@
-name: Build Windows test package
+name: Build Windows package
 
 on:
   workflow_dispatch:
@@ -76,7 +76,7 @@ jobs:
           Copy-Item $dll $dist
           Copy-Item examples/TEST-red-blue-swap.cube $dist
           @"
-          dwm_lut Windows 11 25H2 test build
+          dwm_lut Windows 11 25H2 build
 
           1. Extract this ZIP.
           2. Run DwmLutGUI.exe as Administrator.
@@ -84,14 +84,14 @@ jobs:
           4. Diagnostics are written beside DwmLutGUI.exe as dwm_lut.log.
 
           Keep all files in this folder together. Do not copy dwm_lut.dll to System32.
-          "@ | Set-Content "$dist/README-test-build.txt" -Encoding UTF8
+          "@ | Set-Content "$dist/README.txt" -Encoding UTF8
           Compress-Archive -Path "$dist/*" `
-            -DestinationPath "$env:GITHUB_WORKSPACE/build/dwm_lut-v4.1.0-windows-x64-test.zip"
+            -DestinationPath "$env:GITHUB_WORKSPACE/build/dwm_lut-v4.1.0-windows-x64.zip"
 
-      - name: Upload test package
+      - name: Upload package
         uses: actions/upload-artifact@v7
         with:
-          name: dwm_lut-v4.1.0-windows-x64-test
-          path: build/dwm_lut-v4.1.0-windows-x64-test.zip
+          name: dwm_lut-v4.1.0-windows-x64
+          path: build/dwm_lut-v4.1.0-windows-x64.zip
           if-no-files-found: error
           retention-days: 14

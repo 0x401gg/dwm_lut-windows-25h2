@@ -4,14 +4,25 @@ All notable changes to this maintenance fork are documented here.
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [4.1.0] - 2026-06-22
+
 ### Added
 
 - Release-build diagnostics written from inside `dwm.exe` to `dwm_lut.log`
   beside `DwmLutGUI.exe`.
 - 25H2 logging for Present hook entry, back-buffer lookup, texture format,
   monitor coordinate lookup, and configured LUT matching.
-- A lean test package containing only the runtime files required to use the app,
-  the visible test LUT, and a short test-build readme.
+- A lean Windows package containing only the runtime files required to use the
+  app, the visible test LUT, and a short readme.
+- Windows 11 25H2 support for the build 26200 servicing family.
+- Updated DWM signatures for `COverlayContext::Present`,
+  `IsCandidateDirectFlipCompatible`, and `OverlaysEnabled`.
+- D3D11 back-buffer discovery through the 25H2 overlay swap-chain vtable.
+- Updated per-monitor coordinate lookup for the 25H2 DWM object layout.
+- A transparent, click-through compositor overlay to keep LUTs active when
+  DirectFlip would otherwise bypass DWM.
 
 ### Fixed
 
@@ -25,20 +36,9 @@ All notable changes to this maintenance fork are documented here.
 
 ### Known limitations
 
-- Runtime validation is still in progress across GPUs and Windows 11 25H2
-  cumulative updates.
-
-## [4.1.0] - 2026-06-20
-
-### Added
-
-- Windows 11 25H2 support for the build 26200 servicing family.
-- Updated DWM signatures for `COverlayContext::Present`,
-  `IsCandidateDirectFlipCompatible`, and `OverlaysEnabled`.
-- D3D11 back-buffer discovery through the 25H2 overlay swap-chain vtable.
-- Updated per-monitor coordinate lookup for the 25H2 DWM object layout.
-- A transparent, click-through compositor overlay to keep LUTs active when
-  DirectFlip would otherwise bypass DWM.
+- Runtime validation has been performed on Windows 11 25H2 build 26200.8457
+  with a GeForce laptop and the included SDR test LUT. Other GPU/display
+  combinations should still be tested.
 
 ### Changed
 

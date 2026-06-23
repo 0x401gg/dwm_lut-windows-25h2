@@ -36,9 +36,9 @@ No unreleased changes.
 
 ### Known limitations
 
-- Runtime validation has been performed on Windows 11 25H2 build 26200.8457
-  with a GeForce laptop and the included SDR test LUT. Other GPU/display
-  combinations should still be tested.
+- Runtime validation has been performed on a Windows 11 25H2 build 26200.8457
+  test system with the included SDR test LUT. Other GPU/display combinations
+  should still be tested.
 
 ### Changed
 

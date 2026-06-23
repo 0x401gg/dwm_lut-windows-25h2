@@ -1,9 +1,9 @@
 # dwm_lut for current Windows 11 builds
 
 > [!WARNING]
-> **New 25H2 support:** validated on Windows 11 25H2 build 26200.8457 with a
-> GeForce laptop using the included SDR test LUT. DWM internals can still change
-> in future cumulative updates.
+> **New 25H2 support:** validated on a Windows 11 25H2 build 26200.8457 test
+> system using the included SDR test LUT. DWM internals can still change in
+> future cumulative updates.
 
 > Vibe-coded with Codex 5.5.
 

@@ -11,11 +11,17 @@ All notable changes to this maintenance fork are documented here.
 - 25H2 logging for Present hook entry, back-buffer lookup, texture format,
   monitor coordinate lookup, and configured LUT matching.
 
+### Fixed
+
+- Corrected Windows 11 25H2 monitor-position lookup. On tested build
+  26200.8457, the previous 25H2 path read the composed surface size
+  (`1366,768`) as the monitor position, so it could not match the configured
+  primary display LUT at (`0,0`).
+
 ### Known limitations
 
-- User testing on a GeForce laptop with Windows 11 25H2 build 26200.8457
-  confirmed that injection succeeds but the visible LUT effect does not apply.
-  Treat the current 25H2 build as diagnostic-only until the DWM path is fixed.
+- Runtime validation is still in progress across GPUs and Windows 11 25H2
+  cumulative updates.
 
 ## [4.1.0] - 2026-06-20
 

@@ -1,9 +1,8 @@
 # dwm_lut for current Windows 11 builds
 
 > [!WARNING]
-> **Experimental / not working yet on tested 25H2 systems:** this fork injects
-> into DWM on Windows 11 25H2, but the LUT effect has not been observed on
-> tested builds including 26200.8457. Use it only for diagnostics right now.
+> **Experimental:** this fork targets Windows 11 25H2 build 26200.x. Runtime
+> behavior is still being validated across GPUs and cumulative updates.
 
 > Vibe-coded with Codex 5.5.
 
@@ -50,9 +49,10 @@ Compatibility targets:
 Windows 11 26H1 (build 28000) is deliberately rejected rather than being treated
 as 25H2: its private DWM layout has not been verified.
 
-The 25H2 signatures and offsets were tested by the contributing patch author on
-build 26200 with two 2560x1440 displays. Source-level verification is possible on
-other platforms, but runtime validation must be done on the target Windows build.
+The 25H2 signatures and offsets were initially tested by the contributing patch
+author on build 26200 with two 2560x1440 displays. Runtime validation must still
+be done on the target Windows build/GPU. Diagnostic testing on build 26200.8457
+confirmed the hook and back-buffer path, and corrected monitor-position lookup.
 
 # Usage
 Use DisplayCAL or similar to generate .cube LUT files of any size, run `DwmLutGUI.exe`, assign them to monitors and then click Apply. Note that LUTs cannot be applied to monitors that are in "Duplicate" mode.

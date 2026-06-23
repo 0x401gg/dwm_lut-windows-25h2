@@ -657,11 +657,15 @@ lutData* GetLUTDataFromCOverlayContext(void* context, bool hdr)
 	{
 		void* realObj = *(void**)context;
 		float* rect = (float*)((unsigned char*)realObj + 0x7698);
-		left = (int)rect[0];
-		top = (int)rect[1];
+		// On current 25H2 builds rect[0]/rect[1] are the composed surface size.
+		// The monitor position is stored in rect[2]/rect[3], matching the 24H2
+		// object layout.
+		left = (int)rect[2];
+		top = (int)rect[3];
 
-		char message_buf[160];
-		sprintf(message_buf, "25H2 LUT lookup: context=0x%p realObj=0x%p left=%d top=%d hdr=%d", context, realObj, left, top, hdr);
+		char message_buf[256];
+		sprintf(message_buf, "25H2 LUT lookup: context=0x%p realObj=0x%p rect={%.1f,%.1f,%.1f,%.1f} left=%d top=%d hdr=%d",
+			context, realObj, rect[0], rect[1], rect[2], rect[3], left, top, hdr);
 		LOG_ONLY_ONCE(message_buf)
 	}
 	else if (isWindows11_24h2)
